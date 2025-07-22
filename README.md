@@ -1,93 +1,88 @@
-# Directed Graph
+# Mixed Graph
 
-Python implementation of a mutable directed graph featuring DFS/BFS traversal, cycle detection, shortest path lookup, and topological sort.
+Python implementation of a **mutable graph** that can hold directed and undirected edges. It supports DFS/BFS traversal, cycle detection, shortest‑path reconstruction, and topological sort (when the graph forms a DAG).
 
 ---
 
 ## Vertex Class
 
-Each `Vertex` instance represents one node in the graph.
+Each `Vertex` instance represents a single node.
 
 ### Vertex Fields
 
-| Field     | Type          | Description                                                         |
-|-----------|---------------|---------------------------------------------------------------------|
-| `value`   | `Any`         | User supplied identifier for the vertex (must be hashable).         |
-| `neighbors` | `set[Any]`  | Set of **outgoing** neighbor values (`value`s of adjacent vertices).|
-| `color`   | `str`         | Traversal mark: `'white'` (unvisited), `'gray'` (in progress), `'black'` (finished). |
-| `d`       | `int` | Discovery time in DFS, or distance from BFS source; `∞` by default. |
-| `f`       | `int` | Finish time in DFS; `∞` by default.                                 |
-| `parent`  | `Any`  | Predecessor value recorded by DFS/BFS; `None` if root or unreachable.|
+| Field       | Type             | Description                                                                                                            |
+| ----------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `value`     | `Any`            | User‑supplied identifier (must be hashable).                                                                           |
+| `neighbors` | `dict[Any, str]` | Mapping **neighbor value → edge kind**, where edge kind is `'directed'` (this → neighbor) or `'undirected'` (two‑way). |
+| `color`     | `str`            | Traversal mark: `'white'` (unvisited), `'gray'` (in progress), `'black'` (finished).                                   |
+| `d`         | `int`            | Discovery time in DFS, or distance from BFS source; `∞` by default.                                                    |
+| `f`         | `int`            | Finish time in DFS; `∞` by default.                                                                                    |
+| `parent`    | `Any`            | Predecessor recorded by traversal; `None` if root/unreachable.                                                         |
 
 ---
 
 ## Graph Class
 
-- **Constructor**  
-  `Graph(vertices: Iterable[Any])`  
-  Create an empty graph, or preload it with any hashable vertex values.
+```python
+class Graph:
+    def __init__(self, vertices = None):
+        ...
+```
 
-## Graph Fields
+Creates an empty graph or pre‑loads it with vertices. Edges can subsequently be added in *directed* or *undirected* form; the structure may therefore be **directed**, **undirected**, or **mixed**.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `vertices`   | `dict[Any, Vertex]` | Mapping from **vertex value** → **Vertex object**. Stores the entire adjacency structure. |
-| `dfs_cycle`  | `bool` | Set to `True` by `dfs()` if a back edge is encountered (i.e., the graph is cyclic). |
-| `updated_dfs`| `bool` | `True` when the DFS metadata (`d`, `f`, `color`, `parent`, `dfs_cycle`) is up to date. Automatically cleared by any structural change. |
-| `updated_bfs`| `bool` | `True` when the BFS metadata (`d`, `parent`) for the last `source` vertex is valid. Automatically cleared by any structural change. |
-| `source`     | `Any` | The vertex value used as the root in the most recent `bfs()` call; `None` if no BFS has been run or the structure has changed since. |
+### Graph Fields
 
-## Functions 
+| Field              | Type                | Description                                                                          |
+| ------------------ | ------------------- | ------------------------------------------------------------------------------------ |
+| `vertices`         | `dict[Any, Vertex]` | Mapping *vertex value → Vertex*.                                                     |
+| `directed_edges`   | `int`               | Count of directed edges (`u → v`).                                                   |
+| `undirected_edges` | `int`               | Count of undirected edges (`u — v`).                                                 |
+| `dfs_cycle`        | `bool`              | Set by `dfs()` when a back edge is detected (i.e., the current structure is cyclic). |
+| `updated_dfs`      | `bool`              | `True` when DFS metadata is current.                                                 |
+| `updated_bfs`      | `bool`              | `True` when BFS metadata for `source` is current.                                    |
+| `source`           | `Any`               | Root used in the most recent `bfs()` (or `None` if none).                            |
 
-- **Add Vertex**  
-  `self.add_vertex(value)`
-  Insert a new vertex if it does not already exist.
+---
 
-- **Remove Vertex**  
-  `self.remove_vertex(value)`
-  Delete a vertex and every incident edge.
+## Public API
 
-- **Add Edge**  
-  `self.connect(src, dst)`
-  Add a directed edge src → dst; creates endpoints if needed. Self loops are ignored.
+| Operation                 | Signature                                         | Effect                                                                                                             |
+| ------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **Add vertex**            | `add_vertex(value)`                               | Insert a vertex if absent.                                                                                         |
+| **Remove vertex**         | `remove_vertex(value)`                            | Delete vertex and every incident edge.                                                                             |
+| **Add *directed* edge**   | `connect_directed(u, v)`                          | Insert `u → v`; creates endpoints implicitly. Overwrites an existing undirected edge `u — v`.                      |
+| **Add *undirected* edge** | `connect_undirected(u, v)`                        | Insert `u — v`; stored as two symmetric neighbor entries. Overwrites any existing directed edges between the pair. |
+| **Remove edge**           | `disconnect(u, v)`                                | Delete edge(s) that originate at `u` (or both directions if the edge is undirected).                               |
+| **Get vertex**            | `get(value)`                                      | Return the `Vertex` or `None`.                                                                                     |
+| **Neighbors**             | `get_neighbors(value)`                            | Return a `set` with the neighbor values of `value`.                                                                |
+| **Graph type**            | `type()`                                          | Return `'directed'`, `'undirected'`, or `'mixed'`.                                                                 |
+| **Cycle detection**       | `has_cycle()`                                     | `True` iff the current graph contains a cycle (directed or undirected).                                            |
+| **Depth‑First Search**    | `dfs()`                                           | Populate `d`, `f`, `color`, for every vertex.                                                             |
+| **Breadth‑First Search**  | `bfs(source)`                                     | Level‑order traversal starting at `source`; records `d`, `parent`. `source` must exist in the graph.                                                |
+| **Shortest path**         | `path(source, target)`                            | Reconstruct unweighted shortest path `source → … → target` (empty list if unreachable).                            |
+| **Topological sort**      | `topological_sort()`                              | Return a topological ordering iff `type() == 'directed'` **and** `has_cycle()` is `False`; otherwise `None`.       |
+| **Debug helpers**         | `reset(hard_reset=False)` / `paint(value, color)` | Clear traversal metadata / manually set a vertex color.                                                            |
 
-- **Remove Edge**  
-  `self.disconnect(src, dst)`
-  Remove the directed edge src → dst if present.
+---
 
-- **Get Vertex**  
-  `self.get(value)`
-  Return the Vertex object for value; raises KeyError if absent.
+## Edge Semantics
 
-- **Neighbors**  
-  `self.get_neighbors(value)`
-  Return a copy of the neighbor set of `value` (or an empty set if the vertex is missing).
+* **Directed** edge `u → v` is stored **once**: `u.neighbors[v] = 'directed'`.
+* **Undirected** edge `u — v` is stored **twice**: both vertices list each other with edge kind `'undirected'`.
 
-- **Cycle Detection**  
-  `self.has_cycle()`
-  Return True if the graph contains a directed cycle.
+Mixing edge kinds is allowed; `type()` inspects the counts to classify the current structure.
 
-- **Depth First Search**  
-  `self.dfs()`
-  Label every vertex with discovery time d, finish time f, color, and parent; updates the cycle flag.
+---
 
-- **Breadth‑First Search**  
-  `self.bfs(source)`
-  Level order traversal from source; records distance d and parent for each reachable vertex.
+## Complexity Notes
 
-- **Shortest Path**  
-  `self.path(source, target)`  
-  Return the shortest unweighted path source → … → target; returns an empty list if unreachable.
-
-- **Topological Sort**  
-  `self.topological_sort()`  
-  Return a list of vertex values in topological order if the graph is acyclic; otherwise None.
-
-- **(Debug) Reset Flags / State**  
-  `self.reset(hard_reset: bool = False)`  
-  Internal helper that invalidates DFS/BFS metadata after structural edits.  
-  If `hard_reset=True`, it also clears every vertex’s traversal fields (`color`, `d`, `f`, `parent`).
-
-- **(Debug) Paint**  
-  `self.paint(value, color)`  
-  Manually set the traversal color of a vertex ('white', 'gray', or 'black') for debugging.
+| Operation                                    | Time                                 | Space         |
+| -------------------------------------------- | ------------------------------------ | --------------|
+| `add_vertex`, `get`, `type`                  | **O(1)**                             | **O(1)**      |
+| `get_neighbors`                              | **O(V)**                             | **O(V)**      |
+| `remove_vertex`                              | **O(V)**                             | **O(1)**      |
+| `connect_*`, `disconnect`                    | **O(1)**                             | **O(1)**      |
+| `dfs`, `bfs`                                 | **O(V + E)**                         | **O(V)**      |
+| `path`                                       | **O(V)** W.C                         | **O(V)**      |
+| `topological_sort`, `has_cycle`              | **O(V + E)**                         | **O(V)**      |
