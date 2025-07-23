@@ -80,9 +80,9 @@ Mixing edge kinds is allowed; `type()` inspects the counts to classify the curre
 | Operation                                    | Time                                 | Space         |
 | -------------------------------------------- | ------------------------------------ | --------------|
 | `add_vertex`, `get`, `type`                  | **O(1)**                             | **O(1)**      |
-| `get_neighbors`                              | **O(V)**                             | **O(V)**      |
-| `remove_vertex`                              | **O(V)**                             | **O(1)**      |
-| `connect_*`, `disconnect`                    | **O(1)**                             | **O(1)**      |
+| `get_neighbors`                              | **O(deg(V))**                        | **O(deg(V))** |
+| `remove_vertex`                              | **O(V + E)**                         | **O(deg(V))** |
+| `connect`, `disconnect`                      | **O(1)**                             | **O(1)**      |
 | `dfs`, `bfs`                                 | **O(V + E)**                         | **O(V)**      |
-| `path`                                       | **O(V)** W.C                         | **O(V)**      |
+| `path`                                       | **O(V + E)**                         | **O(V)**      |
 | `topological_sort`, `has_cycle`              | **O(V + E)**                         | **O(V)**      |
